@@ -1,59 +1,50 @@
 // Copyright (C) 2026 Jorge Andre Castro
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 2 or the License, or
-// (at your option) any later version.
+// the Free Software Foundation, either version 2 or any later version.
 
-#![no_std] // No standard library, suitable for embedded environments
+#![no_std] // Suitable for embedded systems without standard library
+
 //! # so2nostd
 //!
-//!  Second-Order (SO2) system implementation for discrete-time control.
-//! Designed for high-performance embedded systems requiring stability and precision.
+//! Discrete-time Second-Order (SO2) controller for embedded systems.
+//! Robust, physics-based, `no_std` Rust implementation.
 
-/// Core SO2 Controller structure.
-/// Implements a discrete-time second-order transfer function.
-/// # Example
-///
-/// ```
-/// use so2nostd::So2Controller;
-///
-/// // Initialisation : omega_n = 10.0, zeta = 0.7
-/// let mut so2 = So2Controller::new(10.0, 0.7, 0.0, 1.0);
-/// let output = so2.update(1.0, 0.01);
-/// assert!(output >= 0.0);
-/// ```
-
-// This optionally uses f32 for reduced memory usage (RP2040, etc.), but defaults to f64.
 #[cfg(feature = "f32")]
 pub type Float = f32;
-// By default, we use f64 for better precision in control calculations.
 #[cfg(not(feature = "f32"))]
 pub type Float = f64;
 
+/// Core SO2 Controller structure
+#[derive(Debug, Clone, Copy)]
 pub struct So2Controller {
-    /// Natural frequency (omega_n)
+    /// Natural frequency ω_n (rad/s)
     pub w_n: Float,
-    /// Damping ratio (zeta)
+    /// Damping ratio ζ (1.0 = critically damped)
     pub zeta: Float,
     /// Current state value
     y: Float,
     /// Previous state value
     y_prev: Float,
     /// Target setpoint
-    setpoint: Float,
+    pub setpoint: Float,
     /// Static gain
-    gain: Float,
+    pub gain: Float,
+    /// Optional max velocity for safety (units/sec)
+    pub max_velocity: Option<Float>,
+    /// Optional max acceleration for safety (units/sec²)
+    pub max_acceleration: Option<Float>,
 }
 
 impl So2Controller {
-    /// Creates a new SO2 controller instance.
-    ///
-    /// # Arguments
-    /// * `w_n` - Natural frequency in rad/s.
-    /// * `zeta` - Damping ratio (1.0 is critically damped).
-    /// * `initial_value` - Starting point of the system.
-    /// * `gain` - System static gain (usually 1.0).
-    pub fn new(w_n: Float, zeta: Float, initial_value: Float, gain: Float) -> Self {
+    /// Create a new SO2 controller
+    #[inline(always)]
+    pub fn new(
+        w_n: Float,
+        zeta: Float,
+        initial_value: Float,
+        gain: Float,
+    ) -> Self {
         Self {
             w_n,
             zeta,
@@ -61,51 +52,68 @@ impl So2Controller {
             y_prev: initial_value,
             setpoint: initial_value,
             gain,
+            max_velocity: None,
+            max_acceleration: None,
         }
     }
 
-    /// Computes the next state based on the input and delta time.
-    /// Uses a discrete approximation of s² + 2ζωns + ωn².
-    ///
-    /// # Arguments
-    /// * `input` - The driving force or target.
-    /// * `dt` - Delta time since the last update.
+    /// Update the controller state for given input and timestep
+    #[inline(always)]
     pub fn update(&mut self, input: Float, dt: Float) -> Float {
-        // Safety check for time steps
-        if dt <= 0.0 {
+        if !dt.is_finite() || dt <= 0.0 {
             return self.y;
         }
 
-        // Calculation of coefficients for the second-order differential equation
-        // a = w_n^2, b = 2 * zeta * w_n
+        // Manual clamp for maximum no_std portability
+        let safe_dt = if dt < 1e-6 { 1e-6 } else if dt > 0.1 { 0.1 } else { dt };
+
         let a = self.w_n * self.w_n;
         let b = 2.0 * self.zeta * self.w_n;
 
-        // Current velocity (numerical differentiation)
-        let dy = (self.y - self.y_prev) / dt;
+        let dy = (self.y - self.y_prev) / safe_dt;
+        let mut d2y = self.gain * a * (self.setpoint - self.y) - b * dy - a * self.y;
 
-        // Acceleration: d2y = gain * a * input - b * dy - a * y
-        let d2y = (self.gain * a * input) - (b * dy) - (a * self.y);
+        if let Some(max_a) = self.max_acceleration {
+            if d2y > max_a { d2y = max_a; }
+            else if d2y < -max_a { d2y = -max_a; }
+        }
 
-        // Numerical integration (Euler-Method)
-        let next_y = self.y + (dy * dt) + (0.5 * d2y * dt * dt);
+        let mut next_y = self.y + dy * safe_dt + 0.5 * d2y * safe_dt * safe_dt;
 
-        // State update
+        if let Some(max_v) = self.max_velocity {
+            let vel = (next_y - self.y) / safe_dt;
+            if vel > max_v { next_y = self.y + max_v * safe_dt; }
+            else if vel < -max_v { next_y = self.y - max_v * safe_dt; }
+        }
+
         self.y_prev = self.y;
         self.y = next_y;
-
         self.y
     }
-
-    /// Dynamically update the target setpoint.
+    /// Set a new target setpoint
+    #[inline(always)]
     pub fn set_target(&mut self, target: Float) {
         self.setpoint = target;
     }
 
-    /// Reset internal states to a specific value.
+    /// Reset controller internal states
+    #[inline(always)]
     pub fn reset(&mut self, value: Float) {
         self.y = value;
         self.y_prev = value;
+        self.setpoint = value;
+    }
+
+    /// Optional: set max velocity limit
+    #[inline(always)]
+    pub fn set_max_velocity(&mut self, max_v: Float) {
+        self.max_velocity = Some(max_v);
+    }
+
+    /// Optional: set max acceleration limit
+    #[inline(always)]
+    pub fn set_max_acceleration(&mut self, max_a: Float) {
+        self.max_acceleration = Some(max_a);
     }
 }
 
@@ -116,25 +124,26 @@ mod tests {
 
     #[test]
     fn test_so2_stability() {
-        //Test on a simple step input to verify stability and convergence
         let mut so2 = So2Controller::new(20.0, 0.5, 0.0, 1.0);
         let dt = 0.005;
-        let mut current_y = 0.0;
-
-        // Simulate 200 iterations with a step input of 10.0
-        for _ in 0..200 {
-            current_y = so2.update(10.0, dt);
-        }
-
-        // The output should converge close to the input value (10.0) without diverging
-        assert!((current_y - 10.0).abs() < 0.5);
+        let mut y = 0.0;
+        for _ in 0..200 { y = so2.update(10.0, dt); }
+        assert!((y - 10.0).abs() < 0.5);
     }
 
     #[test]
     fn test_zero_dt_integrity() {
         let mut so2 = So2Controller::new(10.0, 1.0, 5.0, 1.0);
         let output = so2.update(10.0, 0.0);
-        // With zero dt, the output should not change from the initial value
         assert_eq!(output, 5.0);
+    }
+
+    #[test]
+    fn test_setpoint_tracking() {
+        let mut so2 = So2Controller::new(10.0, 0.7, 0.0, 1.0);
+        so2.set_target(1.0);
+        let mut y = 0.0;
+        for _ in 0..100 { y = so2.update(0.0, 0.01); }
+        assert!((y - 1.0).abs() < 0.5);
     }
 }
