@@ -6,7 +6,7 @@
 
 #![no_std] // No standard library, suitable for embedded environments
 //! # so2nostd
-//! 
+//!
 //!  Second-Order (SO2) system implementation for discrete-time control.
 //! Designed for high-performance embedded systems requiring stability and precision.
 
@@ -47,7 +47,7 @@ pub struct So2Controller {
 
 impl So2Controller {
     /// Creates a new SO2 controller instance.
-    /// 
+    ///
     /// # Arguments
     /// * `w_n` - Natural frequency in rad/s.
     /// * `zeta` - Damping ratio (1.0 is critically damped).
@@ -66,7 +66,7 @@ impl So2Controller {
 
     /// Computes the next state based on the input and delta time.
     /// Uses a discrete approximation of s² + 2ζωns + ωn².
-    /// 
+    ///
     /// # Arguments
     /// * `input` - The driving force or target.
     /// * `dt` - Delta time since the last update.
