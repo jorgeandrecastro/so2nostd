@@ -1,0 +1,26 @@
+[package]
+name = "so2nostd"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jorge Andre Castro <georgeandrec@gmail.com>"]
+license = "GPL-2.0-or-later"
+description = "A robust Second-Order (SO2) controller implementation for no_std environments, protected by GPL."
+repository = "https://github.com/jorgeandrecastro/so2nostd" 
+documentation = "https://docs.rs/so2nostd"
+readme = "Readme.md"
+
+[profile.release]
+opt-level = "z"      # Optimize for minimal binary size
+lto = true           # Link Time Optimization (dead code elimination)
+codegen-units = 1    # Maximizes optimization at the expense of compile time
+panic = "abort"      # Removes heavy error messages on crash
+strip = true         # Strips all debug symbols (anti-reverse engineering)
+
+[features]
+# By default, f64 is used for precision
+default = [] 
+# f32 option for constrained environments like RP2040
+f32 = []
+
+[badges]
+maintenance = { status = "actively-developed" }
