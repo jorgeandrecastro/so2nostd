@@ -6,7 +6,9 @@
 
 ## Second-Order `no_std` Controller for Embedded Systems
 
-**so2nostd** is a lightweight, high-performance `no_std` Rust crate implementing a discrete-time second-order (SO2) control system. Designed for embedded environments like MCUs (e.g., RP2040), it provides stable, physics-based dynamics using Euler integration.  
+**so2nostd** is a lightweight, high-performance `no_std` Rust crate implementing a discrete-time second-order (SO2) control system. Designed for embedded environments like MCUs (e.g., RP2040), it provides stable, physics-based dynamics using Euler integration. 
+# Update Version 0.2.0
+#![forbid(unsafe_code)] for safety and opt-level = 3   for speed 
 
 GPL-2.0-or-later licensed to ensure community protection against privatization. Optimized for minimal footprint and maximal reliability.
 
@@ -32,20 +34,24 @@ GPL-2.0-or-later licensed to ensure community protection against privatization. 
 
 Add to your `Cargo.toml`:
 
-```toml
+````toml
 [dependencies]
-so2nostd = { git = "https://github.com/jorgeandrecastro/so2nostd.git" }
+so2nostd = "0.2.0"
 
 
 f32 for embedded (e.g., Cortex-M):
 
-so2nostd = { git = "https://github.com/jorgeandrecastro/so2nostd.git", features = ["f32"] }
+so2nostd = {version="0.2.0", features = ["f32"] }
+
+cargo add so2nostd
 
 Build with optimizations:
 
 cargo build --release
 
 🚀 Quickstart
+
+````rust
 use so2nostd::So2Controller;
 
 fn main() {
@@ -64,9 +70,10 @@ fn main() {
         // output smoothly approaches setpoint following SO2 dynamics
     }
 }
+````
 
 
-📚 API Reference
+# 📚 API Reference
 
 
 | Method                 | Signature                                                                                | Description                                               |
@@ -102,7 +109,7 @@ Setpoint tracking and safety limit enforcement.
 Run:
 
 cargo test -- --nocapture
-⚖️ License
+# ⚖️ License
 
 GPL-2.0-or-later © 2026 Jorge Andre Castro.
 

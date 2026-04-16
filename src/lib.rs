@@ -4,7 +4,7 @@
 // the Free Software Foundation, either version 2 or any later version.
 
 #![no_std] // Suitable for embedded systems without standard library
-
+#![forbid(unsafe_code)]
 //! # so2nostd
 //!
 //! Discrete-time Second-Order (SO2) controller for embedded systems.
