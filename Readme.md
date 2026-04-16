@@ -7,8 +7,8 @@
 ## Second-Order `no_std` Controller for Embedded Systems
 
 **so2nostd** is a lightweight, high-performance `no_std` Rust crate implementing a discrete-time second-order (SO2) control system. Designed for embedded environments like MCUs (e.g., RP2040), it provides stable, physics-based dynamics using Euler integration. 
-# Update Version 0.2.0
-#![forbid(unsafe_code)] for safety and opt-level = 3   for speed 
+# Update Version 0.2.1
+#![forbid(unsafe_code)] for safety and opt-level = 3 for speed 
 
 GPL-2.0-or-later licensed to ensure community protection against privatization. Optimized for minimal footprint and maximal reliability.
 
@@ -36,20 +36,21 @@ Add to your `Cargo.toml`:
 
 ````toml
 [dependencies]
-so2nostd = "0.2.0"
+so2nostd = "0.2.1"
 
 
 f32 for embedded (e.g., Cortex-M):
 
-so2nostd = {version="0.2.0", features = ["f32"] }
+so2nostd = {version="0.2.1", features = ["f32"] }
 
 cargo add so2nostd
 
 Build with optimizations:
 
 cargo build --release
+````
 
-🚀 Quickstart
+# 🚀 Quickstart
 
 ````rust
 use so2nostd::So2Controller;
@@ -94,7 +95,7 @@ Type: Float = f64 (default) or f32 with feature flag.
 Public fields: w_n, zeta, setpoint, gain (inspectable/tunable).
 
 ⚡ Performance & Optimization
-Binary Size: Minimal, optimized with opt-level="z", LTO, strip = true.
+Binary Size: Minimal, optimized with opt-level=3, LTO, strip = true.
 CPU Cost: Constant time O(1) per update.
 Memory: Stack-only, zero allocation.
 Ideal for 100–10kHz control loops on MCUs.
